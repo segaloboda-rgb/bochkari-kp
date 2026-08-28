@@ -12,9 +12,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Подключаем html2canvas и jsPDF через CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --bg-color: #ffffff;
@@ -36,7 +33,6 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             padding: 16px;
-            /* Внутренний отступ снизу, чтобы контент и кнопка не перекрывались навигацией Telegram */
             padding-bottom: 40px; 
             font-size: 14px;
         }
@@ -171,7 +167,7 @@
             cursor: pointer;
             text-align: center;
             margin-top: 20px;
-            margin-bottom: 30px; /* Запас от нижней панели навигации Telegram */
+            margin-bottom: 30px;
             transition: opacity 0.2s;
         }
 
@@ -186,202 +182,13 @@
 
 
         /* ==========================================================
-           СТРОГИЙ МАКЕТ PDF (А4: 210mm x 297mm)
-           Выведен за пределы экрана для корректного считывания html2canvas
+           СКРЫТЫЙ МАКЕТ ДЛЯ СБОРКИ ДАННЫХ ПЕРЕД ПЕЧАТЬЮ
            ========================================================== */
         #pdf-template {
             position: absolute;
             left: -9999px;
             top: 0;
-            width: 210mm;
-            background: #ffffff;
-            color: #000000;
-            z-index: -9999;
-        }
-
-        .pdf-page {
-            width: 210mm;
-            height: 297mm;
-            padding: 15mm 15mm;
-            box-sizing: border-box;
-            position: relative;
-            background: #ffffff;
-            display: flex;
-            flex-direction: column;
-            page-break-after: always;
-        }
-
-        /* СТРАНИЦА 1: Логотип и отступы */
-        .pdf-header-page1 {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        .pdf-logo-large {
-            width: 90%;
-            max-width: 550px;
-            height: auto;
-            display: inline-block;
-        }
-
-        .pdf-content-page1 {
-            margin-top: 45px; 
-            display: flex;
-            flex-direction: column;
-            flex-grow: 1;
-        }
-
-        .pdf-title {
-            font-size: 24px;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .pdf-greeting {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .pdf-intro-text {
-            font-size: 13px;
-            line-height: 1.5;
-            color: #333333;
-            margin-bottom: 22px;
-            text-align: justify;
-        }
-
-        .pdf-section-heading {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 4px;
-            text-transform: uppercase;
-        }
-
-        .pdf-conditions-list {
-            padding-left: 20px;
-            margin: 0;
-        }
-
-        .pdf-conditions-list li {
-            margin-bottom: 10px;
-            font-size: 13px;
-            line-height: 1.4;
-            color: #111111;
-        }
-
-        .pdf-footer {
-            margin-top: auto;
-            font-size: 10px;
-            color: #777;
-            display: flex;
-            justify-content: space-between;
-            border-top: 1px solid #eee;
-            padding-top: 10px;
-        }
-
-        /* СТРАНИЦА 2: Ассортимент */
-        .pdf-page-2 {
-            padding: 15mm 15mm;
-        }
-
-        /* Шапка категории (45-50% ширины, слева) и цена справа на одной линии */
-        .pdf-assortment-banner-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 10px 0 25px 0;
-            width: 100%;
-        }
-
-        .pdf-red-banner {
-            background-color: var(--red-color);
-            color: #ffffff;
-            text-align: center;
-            padding: 12px 15px;
-            font-size: 16px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-radius: 4px;
-            width: 48%; /* Компактная узкая ширина (около 45-50%) */
-            align-self: flex-start;
-            margin-left: 0;
-        }
-
-        .pdf-price-badge {
-            background-color: var(--red-color);
-            color: #ffffff;
-            border: 2px solid #ffffff;
-            padding: 8px 18px;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 700;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-            text-align: center;
-            white-space: nowrap;
-        }
-
-        /* Горизонтальный ряд товаров (Flexbox в 1 ряд из 7 штук) */
-        .pdf-products-grid {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
-            justify-content: space-between;
-            align-items: stretch;
-            gap: 13px; /* Комфортный зазор между карточками (12-14px) */
-            margin-top: 5px;
-        }
-
-        .pdf-product-card {
-            flex: 1;
-            background: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 10px 6px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            overflow: hidden;
-            min-height: 260px;
-        }
-
-        .pdf-product-title {
-            color: var(--red-color);
-            font-size: 9.5px;
-            font-weight: 700;
-            margin-bottom: 8px;
-            line-height: 1.2;
-            height: 26px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .pdf-product-img-wrap {
-            flex-grow: 1;
-            height: 175px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 4px;
-            overflow: hidden;
-        }
-
-        /* Строгий единый формат отображения для всех бутылок */
-        .pdf-product-img {
-            height: 175px;
-            width: auto;
-            max-width: 100%;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;
+            visibility: hidden;
         }
     </style>
 </head>
@@ -522,51 +329,51 @@
 </div>
 
 
-<!-- СКРЫТЫЙ КОНТЕЙНЕР ДЛЯ ГЕНЕРАЦИИ PDF (2 СТРАНИЦЫ А4) -->
+<!-- СКРЫТЫЙ КОНТЕЙНЕР ДЛЯ СБОРА ДАННЫХ -->
 <div id="pdf-template">
     
     <!-- СТРАНИЦА 1 (Условия) -->
-    <div class="pdf-page" id="pdf-page-1">
-        <div class="pdf-header-page1">
-            <img src="https://i.oneme.ru/i?r=BUE2sh_eZW7g8kugOdIm2NotEUjhq3d7rHwhYkb3RSR4LgMMrb1s3hYgEuELNYxAURy-lVzsyQysV3DaVqjHCp2E&expires=1788036680503" alt="БОЧКАРИ" class="pdf-logo-large" crossorigin="anonymous">
+    <div id="pdf-page-1">
+        <div style="text-align: center; margin-bottom: 10px;">
+            <img src="https://i.oneme.ru/i?r=BUE2sh_eZW7g8kugOdIm2NotEUjhq3d7rHwhYkb3RSR4LgMMrb1s3hYgEuELNYxAURy-lVzsyQysV3DaVqjHCp2E&expires=1788036680503" alt="БОЧКАРИ" style="width: 90%; max-width: 550px; height: auto; display: inline-block;">
         </div>
 
-        <div class="pdf-content-page1">
-            <div class="pdf-title">Предложение по сотрудничеству</div>
+        <div style="margin-top: 45px; display: flex; flex-direction: column;">
+            <div style="font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.5px;">Предложение по сотрудничеству</div>
 
-            <div class="pdf-greeting" id="pdfOutGreeting">Уважаемый партнер!</div>
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;" id="pdfOutGreeting">Уважаемый партнер!</div>
             
-            <div class="pdf-intro-text">
+            <div style="font-size: 13px; line-height: 1.5; color: #333333; margin-bottom: 22px; text-align: justify;">
                 Благодарим Вас за проведенные переговоры. Завод напитков «Бочкари» высоко ценит потенциал Вашей компании и рад предложить взаимовыгодные условия партнерства, направленные на долгосрочное развитие и рост продаж.
             </div>
 
-            <div class="pdf-section-heading">Основные условия сотрудничества:</div>
+            <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 4px; text-transform: uppercase;">Основные условия сотрудничества:</div>
             
-            <ol class="pdf-conditions-list" id="pdfOutConditions">
-                <!-- Динамический нумерованный список условий -->
+            <ol style="padding-left: 20px; margin: 0;" id="pdfOutConditions">
+                <!-- Динамический список -->
             </ol>
         </div>
 
-        <div class="pdf-footer">
+        <div style="margin-top: 50px; font-size: 10px; color: #777; display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 10px;">
             <span id="pdfOutCompanyFooter">Клиент: ООО «Торговая сеть»</span>
             <span>Страница 1 из 2</span>
         </div>
     </div>
 
     <!-- СТРАНИЦА 2 (Ассортимент) -->
-    <div class="pdf-page pdf-page-2" id="pdf-page-2">
-        <!-- Узкая красная плашка категории слева (48%) и плашка цены справа на одной линии -->
-        <div class="pdf-assortment-banner-container">
-            <div class="pdf-red-banner">ЛИМОНАДЫ 0,5 В ПЭТ</div>
-            <div class="pdf-price-badge" id="pdfOutPriceBadge">52.11 руб.</div>
+    <div id="pdf-page-2">
+        <!-- Шапка категории и цена на одной линии -->
+        <div style="display: flex; align-items: center; justify-content: space-between; margin: 10px 0 25px 0; width: 100%;">
+            <div style="background-color: #e31e24; color: #ffffff; text-align: center; padding: 12px 15px; font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-radius: 4px; width: 48%;">ЛИМОНАДЫ 0,5 В ПЭТ</div>
+            <div style="background-color: #e31e24; color: #ffffff; border: 2px solid #ffffff; padding: 8px 18px; border-radius: 25px; font-size: 14px; font-weight: 700; box-shadow: 0 2px 5px rgba(0,0,0,0.15); text-align: center; white-space: nowrap;" id="pdfOutPriceBadge">52.11 руб.</div>
         </div>
 
-        <!-- Горизонтальный ряд выбранных товаров -->
-        <div class="pdf-products-grid" id="pdfOutProductsGrid">
+        <!-- Горизонтальный ряд товаров -->
+        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; justify-content: space-between; align-items: stretch; gap: 12px; margin-top: 5px;" id="pdfOutProductsGrid">
             <!-- Динамические карточки товаров -->
         </div>
 
-        <div class="pdf-footer" style="margin-top: auto;">
+        <div style="margin-top: 50px; font-size: 10px; color: #777; display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 10px;">
             <span id="pdfOutCompanyFooter2">Клиент: ООО «Торговая сеть»</span>
             <span>Страница 2 из 2</span>
         </div>
@@ -580,14 +387,14 @@
         const tg = window.Telegram?.WebApp;
         if (tg) {
             tg.ready();
-            tg.expand(); // Разворачиваем приложение на весь экран телефона
+            tg.expand();
         }
     });
 
-    document.getElementById('generatePdfBtn').addEventListener('click', async function() {
+    document.getElementById('generatePdfBtn').addEventListener('click', function() {
         const btn = this;
         btn.disabled = true;
-        btn.innerText = 'Создание PDF...';
+        btn.innerText = 'Подготовка к печати...';
 
         try {
             // 1. Сбор данных из полей ввода
@@ -609,7 +416,7 @@
             // Цена на овальной плашке
             document.getElementById('pdfOutPriceBadge').innerText = `${basePrice} руб.`;
 
-            // 2. Формирование нумерованного списка условий (только отмеченные)
+            // 2. Формирование списка условий (только отмеченные)
             const conditionsListEl = document.getElementById('pdfOutConditions');
             conditionsListEl.innerHTML = '';
 
@@ -647,6 +454,7 @@
             conditionsConfig.forEach(item => {
                 if (document.getElementById(item.chk).checked) {
                     const li = document.createElement('li');
+                    li.style.cssText = "margin-bottom: 10px; font-size: 13px; line-height: 1.4; color: #111111;";
                     li.innerHTML = item.getText();
                     conditionsListEl.appendChild(li);
                 }
@@ -663,85 +471,95 @@
                     const imgUrl = chk.getAttribute('data-img');
 
                     const card = document.createElement('div');
-                    card.className = 'pdf-product-card';
+                    card.style.cssText = "flex: 1; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 6px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; min-height: 260px;";
                     card.innerHTML = `
-                        <div class="pdf-product-title">${name}</div>
-                        <div class="pdf-product-img-wrap">
-                            <img src="${imgUrl}" class="pdf-product-img" crossorigin="anonymous" alt="${name}" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'150\'><rect width=\'100\' height=\'150\' fill=\'%23f0f0f0\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\' font-size=\'12\'>Нет фото</text></svg>';">
+                        <div style="color: #e31e24; font-size: 9.5px; font-weight: 700; margin-bottom: 8px; line-height: 1.2; height: 26px; display: flex; align-items: center; justify-content: center; text-align: center;">${name}</div>
+                        <div style="flex-grow: 1; height: 175px; display: flex; align-items: center; justify-content: center; margin-bottom: 4px; overflow: hidden;">
+                            <img src="${imgUrl}" style="height: 175px; width: auto; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;" crossorigin="anonymous" alt="${name}">
                         </div>
                     `;
                     productsGridEl.appendChild(card);
                 }
             });
 
-            // 4. Ожидание предзагрузки изображений с таймаутом безопасности
-            const templateContainer = document.getElementById('pdf-template');
-            const images = templateContainer.querySelectorAll('img');
+            // 4. Получаем готовый чистый HTML страниц для печати
+            const page1Html = document.getElementById('pdf-page-1').innerHTML;
+            const page2Html = document.getElementById('pdf-page-2').innerHTML;
 
-            const imagePromises = Array.from(images).map(img => {
-                return new Promise((resolve) => {
-                    if (img.complete && img.naturalHeight !== 0) {
-                        resolve();
-                    } else {
-                        img.onload = () => resolve();
-                        img.onerror = () => resolve(); // Игнорируем битые картинки во избежание зависания
-                    }
-                });
-            });
-
-            // Ожидаем картинки, но не более 4 секунд суммарно
-            await Promise.race([
-                Promise.all(imagePromises),
-                new Promise(resolve => setTimeout(resolve, 4000))
-            ]);
-            
-            // Небольшая задержка для отрисовки DOM
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // 5. Рендеринг страниц через html2canvas с безопасными настройками
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-
-            const page1 = document.getElementById('pdf-page-1');
-            const page2 = document.getElementById('pdf-page-2');
-
-            const canvasOptions = {
-                useCORS: true,
-                allowTaint: true,
-                scale: 1.5,
-                logging: false,
-                imageTimeout: 5000
-            };
-
-            // Рендер Страницы 1
-            const canvas1 = await html2canvas(page1, canvasOptions);
-            const imgData1 = canvas1.toDataURL('image/jpeg', 0.90);
-            pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297);
-
-            // Рендер Страницы 2
-            pdf.addPage();
-            const canvas2 = await html2canvas(page2, canvasOptions);
-            const imgData2 = canvas2.toDataURL('image/jpeg', 0.90);
-            pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297);
-
-            // 6. Вывод PDF через Blob и Telegram WebApp / Браузер
-            const blob = pdf.output('blob');
-            const blobUrl = URL.createObjectURL(blob);
-
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                // Открываем ссылку во встроенном просмотрщике Telegram
-                window.Telegram.WebApp.openLink(blobUrl);
-            } else {
-                // Стандартное скачивание для обычного браузера
-                const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
-                pdf.save(safeFileName);
+            // 5. Открываем окно печати ( iframe / window.open )
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                alert('Пожалуйста, разрешите всплывающие окна в браузере для формирования PDF.');
+                return;
             }
 
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>КП Бочкари — ${companyName}</title>
+                        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+                        <style>
+                            @page {
+                                size: A4 portrait;
+                                margin: 0;
+                            }
+                            body {
+                                font-family: 'Montserrat', sans-serif !important;
+                                margin: 0;
+                                padding: 0;
+                                background: #ffffff;
+                                color: #000000;
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                            }
+                            .page {
+                                width: 210mm;
+                                height: 297mm;
+                                padding: 18mm 18mm;
+                                box-sizing: border-box;
+                                position: relative;
+                                background: #ffffff;
+                                display: flex;
+                                flex-direction: column;
+                                page-break-after: always;
+                                overflow: hidden;
+                            }
+                            @media print {
+                                .page {
+                                    page-break-after: always;
+                                    break-after: page;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="page">
+                            ${page1Html}
+                        </div>
+                        <div class="page">
+                            ${page2Html}
+                        </div>
+                        <script>
+                            // Автоматический вызов окна печати/сохранения в PDF после загрузки изображений
+                            window.onload = function() {
+                                setTimeout(() => {
+                                    window.focus();
+                                    window.print();
+                                }, 800);
+                            };
+                        <\/script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+
         } catch (error) {
-            console.error('Ошибка при генерации PDF:', error);
-            alert('Ошибка при формировании PDF: ' + error.message);
+            console.error('Ошибка при подготовке печати:', error);
+            alert('Не удалось запустить печать: ' + error.message);
         } finally {
-            // Гарантированный сброс состояния кнопки во всех случаях
+            // Восстановление состояния кнопки
             btn.disabled = false;
             btn.innerText = 'Скачать PDF Коммерческого Предложения';
         }
