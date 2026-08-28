@@ -36,7 +36,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             padding: 16px;
-            /* Добавлен внутренний отступ снизу, чтобы контент и кнопка не перекрывались навигацией Telegram */
+            /* Внутренний отступ снизу, чтобы контент и кнопка не перекрывались навигацией Telegram */
             padding-bottom: 40px; 
             font-size: 14px;
         }
@@ -694,7 +694,7 @@
             // Дополнительная задержка для полной отрисовки стилей и шрифта движком браузера
             await new Promise(resolve => setTimeout(resolve, 600));
 
-            // 5. Рендеринг страниц через html2canvas и сохранение в jsPDF
+            // 5. Рендеринг страниц через html2canvas и сохранение/отправка в jsPDF
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
 
@@ -724,9 +724,39 @@
             const imgData2 = canvas2.toDataURL('image/jpeg', 0.95);
             pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297);
 
-            // Сохранение готового PDF-файла
+            // Имя генерируемого файла
             const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
-            pdf.save(safeFileName);
+
+            // 6. Интеграция с Telegram Web App и фоллбек для обычного браузера
+            const tg = window.Telegram?.WebApp;
+            const isTelegram = tg && tg.initData && tg.initData.length > 0;
+
+            if (isTelegram) {
+                // Генерация base64 строки (datauristring) для отправки в бот
+                const pdfBase64 = pdf.output('datauristring');
+                
+                // Попытка отправить данные через WebApp API (если настроено ботом)
+                try {
+                    tg.sendData(pdfBase64);
+                } catch (e) {
+                    console.warn('tg.sendData не выполнен (возможно, превышен лимит размера или бот не принимает datauristring):', e);
+                }
+
+                // Всплывающее уведомление пользователю внутри Telegram
+                tg.showPopup({
+                    title: 'Успешно!',
+                    message: 'Коммерческое предложение сформировано.',
+                    buttons: [{type: 'ok'}]
+                });
+
+                // Фоллбек: открытие PDF в новой вкладке/окне WebView для скачивания/просмотра
+                const blob = pdf.output('blob');
+                const blobURL = URL.createObjectURL(blob);
+                window.open(blobURL, '_blank');
+            } else {
+                // Стандартное сохранение для обычного браузера
+                pdf.save(safeFileName);
+            }
 
         } catch (err) {
             console.error('Ошибка при генерации PDF:', err);
