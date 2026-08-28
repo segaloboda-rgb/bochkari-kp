@@ -674,7 +674,7 @@
                 }
             });
 
-            // 4. Принудительное ожидание загрузки ВСЕХ тегов <img> в контейнере через Promise.all
+            // 4. Ожидание предзагрузки изображений с таймаутом безопасности
             const templateContainer = document.getElementById('pdf-template');
             const images = templateContainer.querySelectorAll('img');
 
@@ -684,84 +684,64 @@
                         resolve();
                     } else {
                         img.onload = () => resolve();
-                        img.onerror = () => resolve(); // Не прерываем процесс при сетевой ошибке картинки
+                        img.onerror = () => resolve(); // Игнорируем битые картинки во избежание зависания
                     }
                 });
             });
 
-            await Promise.all(imagePromises);
+            // Ожидаем картинки, но не более 4 секунд суммарно
+            await Promise.race([
+                Promise.all(imagePromises),
+                new Promise(resolve => setTimeout(resolve, 4000))
+            ]);
             
-            // Дополнительная задержка для полной отрисовки стилей и шрифта движком браузера
-            await new Promise(resolve => setTimeout(resolve, 600));
+            // Небольшая задержка для отрисовки DOM
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-            // 5. Рендеринг страниц через html2canvas и сохранение/отправка в jsPDF
+            // 5. Рендеринг страниц через html2canvas с безопасными настройками
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
 
             const page1 = document.getElementById('pdf-page-1');
             const page2 = document.getElementById('pdf-page-2');
 
-            // Рендер Страницы 1
-            const canvas1 = await html2canvas(page1, { 
-                useCORS: true, 
-                allowTaint: true, 
-                scale: 2,
+            const canvasOptions = {
+                useCORS: true,
+                allowTaint: true,
+                scale: 1.5,
                 logging: false,
-                scrollY: 0
-            });
-            const imgData1 = canvas1.toDataURL('image/jpeg', 0.95);
+                imageTimeout: 5000
+            };
+
+            // Рендер Страницы 1
+            const canvas1 = await html2canvas(page1, canvasOptions);
+            const imgData1 = canvas1.toDataURL('image/jpeg', 0.90);
             pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297);
 
             // Рендер Страницы 2
             pdf.addPage();
-            const canvas2 = await html2canvas(page2, { 
-                useCORS: true, 
-                allowTaint: true, 
-                scale: 2,
-                logging: false,
-                scrollY: 0
-            });
-            const imgData2 = canvas2.toDataURL('image/jpeg', 0.95);
+            const canvas2 = await html2canvas(page2, canvasOptions);
+            const imgData2 = canvas2.toDataURL('image/jpeg', 0.90);
             pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297);
 
-            // Имя генерируемого файла
-            const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
+            // 6. Вывод PDF через Blob и Telegram WebApp / Браузер
+            const blob = pdf.output('blob');
+            const blobUrl = URL.createObjectURL(blob);
 
-            // 6. Интеграция с Telegram Web App и фоллбек для обычного браузера
-            const tg = window.Telegram?.WebApp;
-            const isTelegram = tg && tg.initData && tg.initData.length > 0;
-
-            if (isTelegram) {
-                // Генерация base64 строки (datauristring) для отправки в бот
-                const pdfBase64 = pdf.output('datauristring');
-                
-                // Попытка отправить данные через WebApp API (если настроено ботом)
-                try {
-                    tg.sendData(pdfBase64);
-                } catch (e) {
-                    console.warn('tg.sendData не выполнен (возможно, превышен лимит размера или бот не принимает datauristring):', e);
-                }
-
-                // Всплывающее уведомление пользователю внутри Telegram
-                tg.showPopup({
-                    title: 'Успешно!',
-                    message: 'Коммерческое предложение сформировано.',
-                    buttons: [{type: 'ok'}]
-                });
-
-                // Фоллбек: открытие PDF в новой вкладке/окне WebView для скачивания/просмотра
-                const blob = pdf.output('blob');
-                const blobURL = URL.createObjectURL(blob);
-                window.open(blobURL, '_blank');
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                // Открываем ссылку во встроенном просмотрщике Telegram
+                window.Telegram.WebApp.openLink(blobUrl);
             } else {
-                // Стандартное сохранение для обычного браузера
+                // Стандартное скачивание для обычного браузера
+                const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
                 pdf.save(safeFileName);
             }
 
-        } catch (err) {
-            console.error('Ошибка при генерации PDF:', err);
-            alert('Произошла ошибка при формировании PDF документа.');
+        } catch (error) {
+            console.error('Ошибка при генерации PDF:', error);
+            alert('Ошибка при формировании PDF: ' + error.message);
         } finally {
+            // Гарантированный сброс состояния кнопки во всех случаях
             btn.disabled = false;
             btn.innerText = 'Скачать PDF Коммерческого Предложения';
         }
