@@ -12,8 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Подключаем html2pdf.js (включает html2canvas и jsPDF через единый бандл) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Подключаем html2canvas и jsPDF через CDN для надежного рендеринга PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <style>
         :root {
@@ -36,7 +37,6 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             padding: 16px;
-            /* Внутренний отступ снизу, чтобы контент и кнопка не перекрывались навигацией Telegram */
             padding-bottom: 40px; 
             font-size: 14px;
         }
@@ -171,7 +171,7 @@
             cursor: pointer;
             text-align: center;
             margin-top: 20px;
-            margin-bottom: 30px; /* Запас от нижней панели навигации Telegram */
+            margin-bottom: 30px;
             transition: opacity 0.2s;
         }
 
@@ -187,7 +187,7 @@
 
         /* ==========================================================
            СТРОГИЙ МАКЕТ PDF (А4: 210mm x 297mm)
-           Выведен за пределы экрана для корректного считывания html2pdf
+           Выведен за пределы экрана для корректного считывания
            ========================================================== */
         #pdf-template {
             position: absolute;
@@ -289,7 +289,6 @@
             padding: 15mm 15mm;
         }
 
-        /* Шапка категории (45-50% ширины, слева) и цена справа на одной линии */
         .pdf-assortment-banner-container {
             display: flex;
             align-items: center;
@@ -308,7 +307,7 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             border-radius: 4px;
-            width: 48%; /* Компактная узкая ширина (около 45-50%) */
+            width: 48%;
             align-self: flex-start;
             margin-left: 0;
         }
@@ -326,14 +325,13 @@
             white-space: nowrap;
         }
 
-        /* Горизонтальный ряд товаров (Flexbox в 1 ряд из 7 штук) */
         .pdf-products-grid {
             display: flex;
             flex-direction: row;
             flex-wrap: nowrap;
             justify-content: space-between;
             align-items: stretch;
-            gap: 13px; /* Комфортный зазор между карточками (12-14px) */
+            gap: 13px;
             margin-top: 5px;
         }
 
@@ -374,7 +372,6 @@
             overflow: hidden;
         }
 
-        /* Строгий единый формат отображения для всех бутылок */
         .pdf-product-img {
             height: 175px;
             width: auto;
@@ -383,6 +380,38 @@
             display: block;
             margin: 0 auto;
         }
+
+        /* Модальное окно резервного просмотра для TMA */
+        #preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .modal-card {
+            background: #ffffff;
+            color: #000000;
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        .modal-card h3 { margin-bottom: 10px; font-size: 16px; }
+        .modal-card p { font-size: 13px; color: #555; margin-bottom: 20px; }
+        .modal-buttons { display: flex; gap: 10px; }
+        .modal-buttons button { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn-modal-open { background: var(--black); color: #fff; }
+        .btn-modal-close { background: #ddd; color: #333; }
     </style>
 </head>
 <body>
@@ -517,8 +546,8 @@
         </div>
     </div>
 
-    <!-- Кнопка скачивания -->
-    <button class="btn-submit" id="generatePdfBtn">Скачать PDF Коммерческого Предложения</button>
+    <!-- Кнопка генерации: тип button, заблокирована по умолчанию до инициализации JS -->
+    <button type="button" class="btn-submit" id="generatePdfBtn">Скачать PDF Коммерческого Предложения</button>
 </div>
 
 
@@ -555,13 +584,11 @@
 
     <!-- СТРАНИЦА 2 (Ассортимент) -->
     <div class="pdf-page pdf-page-2" id="pdf-page-2">
-        <!-- Узкая красная плашка категории слева (48%) и плашка цены справа на одной линии -->
         <div class="pdf-assortment-banner-container">
             <div class="pdf-red-banner">ЛИМОНАДЫ 0,5 В ПЭТ</div>
             <div class="pdf-price-badge" id="pdfOutPriceBadge">52.11 руб.</div>
         </div>
 
-        <!-- Горизонтальный ряд выбранных товаров -->
         <div class="pdf-products-grid" id="pdfOutProductsGrid">
             <!-- Динамические карточки товаров -->
         </div>
@@ -574,157 +601,238 @@
 
 </div>
 
+<!-- Резервное модальное окно для надежного просмотра PDF в TMA при сбое нативной загрузки -->
+<div id="preview-modal">
+    <div class="modal-card">
+        <h3>КП успешно сформировано!</h3>
+        <p>Документ готов к просмотру и сохранению на ваше устройство.</p>
+        <div class="modal-buttons">
+            <button type="button" class="btn-modal-open" id="modalOpenPdfBtn">Открыть PDF</button>
+            <button type="button" class="btn-modal-close" id="modalCloseBtn">Закрыть</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // Инициализация Telegram Web App SDK при загрузке DOM
     window.addEventListener('DOMContentLoaded', () => {
         const tg = window.Telegram?.WebApp;
         if (tg) {
             tg.ready();
-            tg.expand(); // Разворачиваем приложение на весь экран телефона
+            tg.expand();
         }
-    });
 
-    document.getElementById('generatePdfBtn').addEventListener('click', async function() {
-        const btn = this;
-        btn.disabled = true;
-        btn.innerText = 'Создание PDF...';
+        const generateBtn = document.getElementById('generatePdfBtn');
+        const modal = document.getElementById('preview-modal');
+        const modalOpenPdfBtn = document.getElementById('modalOpenPdfBtn');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
 
-        try {
-            // 1. Сбор данных из полей ввода
-            const companyName = document.getElementById('companyName').value || 'Партнер';
-            const contactName = document.getElementById('contactName').value.trim();
-            const basePrice = document.getElementById('basePrice').value || '52.11';
+        let lastGeneratedBlobUrl = null;
 
-            // Настройка обращения
-            if (contactName) {
-                document.getElementById('pdfOutGreeting').innerText = `Уважаемый (-ая) ${contactName}!`;
-            } else {
-                document.getElementById('pdfOutGreeting').innerText = 'Уважаемый партнер!';
-            }
+        if (modalCloseBtn) {
+            modalCloseBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        }
 
-            // Название компании в футерах
-            document.getElementById('pdfOutCompanyFooter').innerText = `Клиент: ${companyName}`;
-            document.getElementById('pdfOutCompanyFooter2').innerText = `Клиент: ${companyName}`;
-
-            // Цена на овальной плашке
-            document.getElementById('pdfOutPriceBadge').innerText = `${basePrice} руб.`;
-
-            // 2. Формирование нумерованного списка условий (только отмеченные)
-            const conditionsListEl = document.getElementById('pdfOutConditions');
-            conditionsListEl.innerHTML = '';
-
-            const conditionsConfig = [
-                {
-                    chk: 'cond_delay_chk',
-                    getText: () => `Отсрочка платежа: <b>${document.getElementById('cond_delay_val').value} дней</b>`
-                },
-                {
-                    chk: 'cond_spec_price_chk',
-                    getText: () => `Предоставление индивидуальной цены согласно спецификации`
-                },
-                {
-                    chk: 'cond_fridge_chk',
-                    getText: () => `Модернизация парка холодильного оборудования`
-                },
-                {
-                    chk: 'cond_bonus_chk',
-                    getText: () => `Товарный бонус к каждому холодильнику в размере <b>${document.getElementById('cond_bonus_val').value} руб.</b>`
-                },
-                {
-                    chk: 'cond_retro_chk',
-                    getText: () => `Ежемесячный ретро-бонус в размере <b>${document.getElementById('cond_retro_val').value}%</b>`
-                },
-                {
-                    chk: 'cond_manager_chk',
-                    getText: () => `Поддержка продаж с индивидуальным менеджером`
-                },
-                {
-                    chk: 'cond_delivery_chk',
-                    getText: () => `Бесперебойная поставка продукции в течение <b>${document.getElementById('cond_delivery_val').value}</b>`
-                }
-            ];
-
-            conditionsConfig.forEach(item => {
-                if (document.getElementById(item.chk).checked) {
-                    const li = document.createElement('li');
-                    li.innerHTML = item.getText();
-                    conditionsListEl.appendChild(li);
+        if (modalOpenPdfBtn) {
+            modalOpenPdfBtn.addEventListener('click', () => {
+                if (lastGeneratedBlobUrl) {
+                    window.open(lastGeneratedBlobUrl, '_blank');
                 }
             });
+        }
 
-            // 3. Формирование ассортимента (только отмеченные вкусы)
-            const productsGridEl = document.getElementById('pdfOutProductsGrid');
-            productsGridEl.innerHTML = '';
+        if (generateBtn) {
+            generateBtn.addEventListener('click', async function(event) {
+                event.preventDefault();
+                event.stopPropagation();
 
-            const tasteCheckboxes = document.querySelectorAll('.taste-chk');
-            tasteCheckboxes.forEach(chk => {
-                if (chk.checked) {
-                    const name = chk.getAttribute('data-name');
-                    const imgUrl = chk.getAttribute('data-img');
+                const btn = this;
+                btn.disabled = true;
+                const originalText = btn.innerText;
+                btn.innerText = 'Генерируем PDF...';
 
-                    const card = document.createElement('div');
-                    card.className = 'pdf-product-card';
-                    card.innerHTML = `
-                        <div class="pdf-product-title">${name}</div>
-                        <div class="pdf-product-img-wrap">
-                            <img src="${imgUrl}" class="pdf-product-img" crossorigin="anonymous" alt="${name}" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'150\'><rect width=\'100\' height=\'150\' fill=\'%23f0f0f0\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\' font-size=\'12\'>Нет фото</text></svg>';">
-                        </div>
-                    `;
-                    productsGridEl.appendChild(card);
-                }
-            });
+                try {
+                    // 1. Безопасное чтение полей ввода (Defensive Coding)
+                    const companyInput = document.getElementById('companyName');
+                    const contactInput = document.getElementById('contactName');
+                    const basePriceInput = document.getElementById('basePrice');
 
-            // 4. Ожидание предзагрузки изображений с таймаутом безопасности
-            const templateContainer = document.getElementById('pdf-template');
-            const images = templateContainer.querySelectorAll('img');
+                    const companyName = companyInput && companyInput.value.trim() !== '' ? companyInput.value.trim() : 'Партнер';
+                    const contactName = contactInput ? contactInput.value.trim() : '';
+                    const basePrice = basePriceInput && basePriceInput.value.trim() !== '' ? basePriceInput.value.trim() : '52.11';
 
-            const imagePromises = Array.from(images).map(img => {
-                return new Promise((resolve) => {
-                    if (img.complete && img.naturalHeight !== 0) {
-                        resolve();
-                    } else {
-                        img.onload = () => resolve();
-                        img.onerror = () => resolve(); // Игнорируем битые картинки во избежание зависания
+                    // Настройка обращения
+                    const greetingEl = document.getElementById('pdfOutGreeting');
+                    if (greetingEl) {
+                        greetingEl.innerText = contactName ? `Уважаемый (-ая) ${contactName}!` : 'Уважаемый партнер!';
                     }
-                });
+
+                    // Название компании в футерах
+                    const footer1 = document.getElementById('pdfOutCompanyFooter');
+                    const footer2 = document.getElementById('pdfOutCompanyFooter2');
+                    if (footer1) footer1.innerText = `Клиент: ${companyName}`;
+                    if (footer2) footer2.innerText = `Клиент: ${companyName}`;
+
+                    // Цена на овальной плашке
+                    const priceBadge = document.getElementById('pdfOutPriceBadge');
+                    if (priceBadge) priceBadge.innerText = `${basePrice} руб.`;
+
+                    // 2. Формирование списка условий
+                    const conditionsListEl = document.getElementById('pdfOutConditions');
+                    if (conditionsListEl) {
+                        conditionsListEl.innerHTML = '';
+
+                        const conditionsConfig = [
+                            {
+                                chk: 'cond_delay_chk',
+                                valId: 'cond_delay_val',
+                                getText: (val) => `Отсрочка платежа: <b>${val || '14'} дней</b>`
+                            },
+                            {
+                                chk: 'cond_spec_price_chk',
+                                getText: () => `Предоставление индивидуальной цены согласно спецификации`
+                            },
+                            {
+                                chk: 'cond_fridge_chk',
+                                getText: () => `Модернизация парка холодильного оборудования`
+                            },
+                            {
+                                chk: 'cond_bonus_chk',
+                                valId: 'cond_bonus_val',
+                                getText: (val) => `Товарный бонус к каждому холодильнику в размере <b>${val || '10000'} руб.</b>`
+                            },
+                            {
+                                chk: 'cond_retro_chk',
+                                valId: 'cond_retro_val',
+                                getText: (val) => `Ежемесячный ретро-бонус в размере <b>${val || '10'}%</b>`
+                            },
+                            {
+                                chk: 'cond_manager_chk',
+                                getText: () => `Поддержка продаж с индивидуальным менеджером`
+                            },
+                            {
+                                chk: 'cond_delivery_chk',
+                                valId: 'cond_delivery_val',
+                                getText: (val) => `Бесперебойная поставка продукции в течение <b>${val || '48 часов'}</b>`
+                            }
+                        ];
+
+                        conditionsConfig.forEach(item => {
+                            const chkEl = document.getElementById(item.chk);
+                            if (chkEl && chkEl.checked) {
+                                let val = '';
+                                if (item.valId) {
+                                    const valEl = document.getElementById(item.valId);
+                                    if (valEl) val = valEl.value;
+                                }
+                                const li = document.createElement('li');
+                                li.innerHTML = item.getText(val);
+                                conditionsListEl.appendChild(li);
+                            }
+                        });
+                    }
+
+                    // 3. Формирование ассортимента (товары)
+                    const productsGridEl = document.getElementById('pdfOutProductsGrid');
+                    if (productsGridEl) {
+                        productsGridEl.innerHTML = '';
+
+                        const tasteCheckboxes = document.querySelectorAll('.taste-chk');
+                        tasteCheckboxes.forEach(chk => {
+                            if (chk.checked) {
+                                const name = chk.getAttribute('data-name');
+                                const imgUrl = chk.getAttribute('data-img');
+
+                                const card = document.createElement('div');
+                                card.className = 'pdf-product-card';
+                                card.innerHTML = `
+                                    <div class="pdf-product-title">${name}</div>
+                                    <div class="pdf-product-img-wrap">
+                                        <img src="${imgUrl}" class="pdf-product-img" crossorigin="anonymous" alt="${name}" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'150\'><rect width=\'100\' height=\'150\' fill=\'%23f0f0f0\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\' font-size=\'12\'>Нет фото</text></svg>';">
+                                    </div>
+                                `;
+                                productsGridEl.appendChild(card);
+                            }
+                        });
+                    }
+
+                    // 4. Ожидание загрузки изображений с защитой по таймауту
+                    const templateContainer = document.getElementById('pdf-template');
+                    if (!templateContainer) throw new Error('Шаблон PDF не найден в DOM');
+
+                    const images = templateContainer.querySelectorAll('img');
+                    const imagePromises = Array.from(images).map(img => {
+                        return new Promise((resolve) => {
+                            if (img.complete && img.naturalHeight !== 0) {
+                                resolve();
+                            } else {
+                                img.onload = () => resolve();
+                                img.onerror = () => resolve();
+                            }
+                        });
+                    });
+
+                    await Promise.race([
+                        Promise.all(imagePromises),
+                        new Promise(resolve => setTimeout(resolve, 3000))
+                    ]);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 400));
+
+                    // 5. Генерация через html2pdf.js с фоллбеком
+                    const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
+                    
+                    const opt = {
+                        margin:       0,
+                        filename:     safeFileName,
+                        image:        { type: 'jpeg', quality: 0.92 },
+                        html2canvas:  { 
+                            scale: 1.5, 
+                            useCORS: true, 
+                            allowTaint: true,
+                            logging: false,
+                            scrollY: 0
+                        },
+                        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+
+                    // Пытаемся сгенерировать PDF в виде Blob
+                    const worker = html2pdf().from(templateContainer).set(opt);
+                    const pdfBlob = await worker.output('blob');
+
+                    lastGeneratedBlobUrl = URL.createObjectURL(pdfBlob);
+
+                    // Проверяем Telegram WebApp окружение
+                    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                        // Для TMA вызываем встроенный метод открытия ссылки или показываем модальное окно с кнопкой
+                        try {
+                            window.Telegram.WebApp.openLink(lastGeneratedBlobUrl);
+                        } catch (e) {
+                            if (modal) modal.style.display = 'flex';
+                        }
+                    } else {
+                        // Обычный браузер — штатное скачивание
+                        await worker.save();
+                    }
+
+                    if (tg && tg.showPopup) {
+                        tg.showPopup({
+                            title: 'Успешно!',
+                            message: 'Коммерческое предложение сгенерировано.',
+                            buttons: [{type: 'ok'}]
+                        });
+                    }
+
+                } catch (error) {
+                    console.error('Ошибка генерации PDF:', error);
+                    alert('Не удалось сформировать PDF: ' + error.message);
+                    if (modal) modal.style.display = 'flex'; // Показываем модалку как аварийный шлюз
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
             });
-
-            // Ожидаем картинки, но не более 4 секунд суммарно
-            await Promise.race([
-                Promise.all(imagePromises),
-                new Promise(resolve => setTimeout(resolve, 4000))
-            ]);
-            
-            // Небольшая задержка для отрисовки DOM
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // 5. Настройка параметров html2pdf и генерация файла
-            const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
-            
-            const opt = {
-                margin:       0,
-                filename:     safeFileName,
-                image:        { type: 'jpeg', quality: 0.95 },
-                html2canvas:  { 
-                    scale: 2, 
-                    useCORS: true, 
-                    allowTaint: true,
-                    logging: false,
-                    scrollY: 0
-                },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            // Генерация и скачивание PDF через html2pdf.js
-            await html2pdf().from(templateContainer).set(opt).save();
-
-        } catch (error) {
-            console.error('Ошибка при генерации PDF:', error);
-            alert('Ошибка при формировании PDF: ' + error.message);
-        } finally {
-            // Гарантированный сброс состояния кнопки во всех случаях
-            btn.disabled = false;
-            btn.innerText = 'Скачать PDF Коммерческого Предложения';
         }
     });
 </script>
