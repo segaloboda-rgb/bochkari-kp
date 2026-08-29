@@ -12,9 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Подключаем html2canvas и jsPDF через CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Подключаем html2pdf.js (включает html2canvas и jsPDF через единый бандл) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
         :root {
             --bg-color: #ffffff;
@@ -187,7 +187,7 @@
 
         /* ==========================================================
            СТРОГИЙ МАКЕТ PDF (А4: 210mm x 297mm)
-           Выведен за пределы экрана для корректного считывания html2canvas
+           Выведен за пределы экрана для корректного считывания html2pdf
            ========================================================== */
         #pdf-template {
             position: absolute;
@@ -698,44 +698,25 @@
             // Небольшая задержка для отрисовки DOM
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            // 5. Рендеринг страниц через html2canvas с безопасными настройками
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-
-            const page1 = document.getElementById('pdf-page-1');
-            const page2 = document.getElementById('pdf-page-2');
-
-            const canvasOptions = {
-                useCORS: true,
-                allowTaint: true,
-                scale: 1.5,
-                logging: false,
-                imageTimeout: 5000
+            // 5. Настройка параметров html2pdf и генерация файла
+            const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
+            
+            const opt = {
+                margin:       0,
+                filename:     safeFileName,
+                image:        { type: 'jpeg', quality: 0.95 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true, 
+                    allowTaint: true,
+                    logging: false,
+                    scrollY: 0
+                },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
-            // Рендер Страницы 1
-            const canvas1 = await html2canvas(page1, canvasOptions);
-            const imgData1 = canvas1.toDataURL('image/jpeg', 0.90);
-            pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297);
-
-            // Рендер Страницы 2
-            pdf.addPage();
-            const canvas2 = await html2canvas(page2, canvasOptions);
-            const imgData2 = canvas2.toDataURL('image/jpeg', 0.90);
-            pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297);
-
-            // 6. Вывод PDF через Blob и Telegram WebApp / Браузер
-            const blob = pdf.output('blob');
-            const blobUrl = URL.createObjectURL(blob);
-
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                // Открываем ссылку во встроенном просмотрщике Telegram
-                window.Telegram.WebApp.openLink(blobUrl);
-            } else {
-                // Стандартное скачивание для обычного браузера
-                const safeFileName = `KP_Bochkari_${companyName.replace(/[^a-zA-ZА-Яа-я0-9]/g, '_')}.pdf`;
-                pdf.save(safeFileName);
-            }
+            // Генерация и скачивание PDF через html2pdf.js
+            await html2pdf().from(templateContainer).set(opt).save();
 
         } catch (error) {
             console.error('Ошибка при генерации PDF:', error);
